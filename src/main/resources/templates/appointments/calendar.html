@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+
+<head>
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Calendario de Citas</title>
+</head>
+
+<body>
+    <!-- Breadcrumb -->
+    <div layout:fragment="breadcrumb">
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mr-2"></i>
+                <span class="text-sm font-medium text-gray-500">Citas</span>
+            </div>
+        </li>
+    </div>
+
+    <!-- Page Header -->
+    <div layout:fragment="page-header">
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">
+                <i class="fas fa-calendar-alt mr-3 text-green-600"></i>Calendario de Citas
+            </h1>
+            <div class="flex space-x-3">
+                <button id="new-appointment-btn" 
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Cita
+                </button>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div layout:fragment="content">
+        <!-- Filtros del Calendario -->
+        <div class="bg-white shadow rounded-lg mb-6">
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <!-- Filtro por Doctor -->
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Doctor</label>
+                        <select id="doctor-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            <option value="">Todos los doctores</option>
+                            <!-- Opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro por Estado -->
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Estado de Cita</label>
+                        <select id="status-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            <option value="">Todos los estados</option>
+                            <option value="SCHEDULED">Programada</option>
+                            <option value="COMPLETED">Completada</option>
+                            <option value="CANCELLED">Cancelada</option>
+                            <option value="NO_SHOW">No se presentó</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro por Tipo -->
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Cita</label>
+                        <select id="type-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            <option value="">Todos los tipos</option>
+                            <option value="CONSULTATION">Consulta</option>
+                            <option value="FOLLOWUP">Seguimiento</option>
+                            <option value="EMERGENCY">Emergencia</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendario -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="p-6">
+                <div id="calendar" class="w-full"></div>
+            </div>
+        </div>
+
+        <!-- Modal para Nueva/Editar Cita -->
+        <div id="appointment-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 id="modal-title" class="text-lg font-medium text-gray-900">Nueva Cita</h3>
+                            <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <form id="appointment-form" class="p-6">
+                        <div class="space-y-4">
+                            <!-- Doctor -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Doctor</label>
+                                <select name="doctorId" required 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Seleccionar doctor...</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Paciente -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Paciente</label>
+                                <select name="patientId" required 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Seleccionar paciente...</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Fecha y Hora -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                                    <input type="date" name="date" required 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Hora</label>
+                                    <input type="time" name="time" required 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                </div>
+                            </div>
+                            
+                            <!-- Duración -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Duración (minutos)</label>
+                                <select name="duration" required 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="30">30 minutos</option>
+                                    <option value="45">45 minutos</option>
+                                    <option value="60">1 hora</option>
+                                    <option value="90">1.5 horas</option>
+                                    <option value="120">2 horas</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Tipo de Cita -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Cita</label>
+                                <select name="type" required 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="CONSULTATION">Consulta</option>
+                                    <option value="FOLLOWUP">Seguimiento</option>
+                                    <option value="EMERGENCY">Emergencia</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Notas -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Notas</label>
+                                <textarea name="notes" rows="3" 
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          placeholder="Notas adicionales..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 mt-6">
+                            <button type="button" id="cancel-btn" 
+                                    class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-save mr-2"></i>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Detalles de Cita -->
+        <div id="appointment-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Detalles de la Cita</h3>
+                            <button id="close-details-modal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="appointment-details-content" class="p-6">
+                        <!-- Contenido se carga dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts específicos del calendario -->
+    <div layout:fragment="scripts">
+        <script>
+            let calendar;
+            let currentAppointment = null;
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeCalendar();
+                setupEventListeners();
+                loadDoctors();
+                loadPatients();
+            });
+            
+            function initializeCalendar() {
+                const calendarEl = document.getElementById('calendar');
+                
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: 'es',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    },
+                    height: 'auto',
+                    selectable: true,
+                    selectMirror: true,
+                    dayMaxEvents: true,
+                    weekends: true,
+                    
+                    // Eventos del calendario
+                    select: function(info) {
+                        openAppointmentModal(info.startStr);
+                    },
+                    
+                    eventClick: function(info) {
+                        showAppointmentDetails(info.event);
+                    },
+                    
+                    eventDrop: function(info) {
+                        updateAppointmentTime(info.event);
+                    },
+                    
+                    eventResize: function(info) {
+                        updateAppointmentDuration(info.event);
+                    },
+                    
+                    // Cargar eventos
+                    events: function(info, successCallback, failureCallback) {
+                        loadAppointments(info.startStr, info.endStr, successCallback, failureCallback);
+                    }
+                });
+                
+                calendar.render();
+            }
+            
+            function setupEventListeners() {
+                // Modal de nueva cita
+                document.getElementById('new-appointment-btn').addEventListener('click', () => {
+                    openAppointmentModal();
+                });
+                
+                document.getElementById('close-modal').addEventListener('click', closeAppointmentModal);
+                document.getElementById('cancel-btn').addEventListener('click', closeAppointmentModal);
+                document.getElementById('close-details-modal').addEventListener('click', closeDetailsModal);
+                
+                // Formulario de cita
+                document.getElementById('appointment-form').addEventListener('submit', handleAppointmentSubmit);
+                
+                // Filtros
+                document.getElementById('doctor-filter').addEventListener('change', filterAppointments);
+                document.getElementById('status-filter').addEventListener('change', filterAppointments);
+                document.getElementById('type-filter').addEventListener('change', filterAppointments);
+                
+                // Cerrar modal al hacer clic fuera
+                document.getElementById('appointment-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'appointment-modal') closeAppointmentModal();
+                });
+                
+                document.getElementById('appointment-details-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'appointment-details-modal') closeDetailsModal();
+                });
+            }
+            
+            function openAppointmentModal(dateStr = null) {
+                currentAppointment = null;
+                document.getElementById('modal-title').textContent = 'Nueva Cita';
+                document.getElementById('appointment-form').reset();
+                
+                if (dateStr) {
+                    document.querySelector('input[name="date"]').value = dateStr.split('T')[0];
+                }
+                
+                document.getElementById('appointment-modal').classList.remove('hidden');
+            }
+            
+            function closeAppointmentModal() {
+                document.getElementById('appointment-modal').classList.add('hidden');
+                currentAppointment = null;
+            }
+            
+            function closeDetailsModal() {
+                document.getElementById('appointment-details-modal').classList.add('hidden');
+            }
+            
+            function handleAppointmentSubmit(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const appointmentData = {
+                    doctorId: formData.get('doctorId'),
+                    patientId: formData.get('patientId'),
+                    startTime: formData.get('date') + 'T' + formData.get('time'),
+                    type: formData.get('type'),
+                    notes: formData.get('notes'),
+                    duration: parseInt(formData.get('duration'))
+                };
+                
+                // Calcular hora de fin
+                const startTime = new Date(appointmentData.startTime);
+                const endTime = new Date(startTime.getTime() + appointmentData.duration * 60000);
+                appointmentData.endTime = endTime.toISOString();
+                
+                if (currentAppointment) {
+                    updateAppointment(currentAppointment.id, appointmentData);
+                } else {
+                    createAppointment(appointmentData);
+                }
+            }
+            
+            function loadAppointments(start, end, successCallback, failureCallback) {
+                // Simular carga de citas - aquí se haría la llamada real al backend
+                const mockAppointments = [
+                    {
+                        id: '1',
+                        title: 'Dr. García - Juan Pérez',
+                        start: '2024-01-15T10:00:00',
+                        end: '2024-01-15T11:00:00',
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#2563EB',
+                        extendedProps: {
+                            doctorName: 'Dr. García',
+                            patientName: 'Juan Pérez',
+                            type: 'CONSULTATION',
+                            status: 'SCHEDULED'
+                        }
+                    },
+                    {
+                        id: '2',
+                        title: 'Dra. López - María González',
+                        start: '2024-01-15T14:00:00',
+                        end: '2024-01-15T15:00:00',
+                        backgroundColor: '#10B981',
+                        borderColor: '#059669',
+                        extendedProps: {
+                            doctorName: 'Dra. López',
+                            patientName: 'María González',
+                            type: 'FOLLOWUP',
+                            status: 'SCHEDULED'
+                        }
+                    }
+                ];
+                
+                successCallback(mockAppointments);
+            }
+            
+            function loadDoctors() {
+                // Cargar lista de doctores para los selects
+                fetch('/api/doctors')
+                    .then(response => response.json())
+                    .then(doctors => {
+                        const doctorSelects = document.querySelectorAll('select[name="doctorId"], #doctor-filter');
+                        doctorSelects.forEach(select => {
+                            // Limpiar opciones existentes (excepto la primera)
+                            while (select.children.length > 1) {
+                                select.removeChild(select.lastChild);
+                            }
+                            
+                            doctors.forEach(doctor => {
+                                const option = document.createElement('option');
+                                option.value = doctor.id;
+                                option.textContent = `${doctor.firstName} ${doctor.lastName} - ${doctor.specialization}`;
+                                select.appendChild(option);
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading doctors:', error);
+                        showAlert('Error al cargar la lista de doctores', 'error');
+                    });
+            }
+            
+            function loadPatients() {
+                // Simular carga de pacientes - aquí se haría la llamada real al backend
+                const mockPatients = [
+                    { id: '1', firstName: 'Juan', lastName: 'Pérez' },
+                    { id: '2', firstName: 'María', lastName: 'González' },
+                    { id: '3', firstName: 'Carlos', lastName: 'Rodríguez' }
+                ];
+                
+                const patientSelect = document.querySelector('select[name="patientId"]');
+                mockPatients.forEach(patient => {
+                    const option = document.createElement('option');
+                    option.value = patient.id;
+                    option.textContent = `${patient.firstName} ${patient.lastName}`;
+                    patientSelect.appendChild(option);
+                });
+            }
+            
+            function createAppointment(appointmentData) {
+                // Simular creación de cita
+                console.log('Creating appointment:', appointmentData);
+                showAlert('Cita creada exitosamente', 'success');
+                closeAppointmentModal();
+                calendar.refetchEvents();
+            }
+            
+            function updateAppointment(id, appointmentData) {
+                // Simular actualización de cita
+                console.log('Updating appointment:', id, appointmentData);
+                showAlert('Cita actualizada exitosamente', 'success');
+                closeAppointmentModal();
+                calendar.refetchEvents();
+            }
+            
+            function showAppointmentDetails(event) {
+                const details = `
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-md text-blue-600 mr-3"></i>
+                            <div>
+                                <p class="font-medium">${event.extendedProps.doctorName}</p>
+                                <p class="text-sm text-gray-500">Doctor</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <i class="fas fa-user text-green-600 mr-3"></i>
+                            <div>
+                                <p class="font-medium">${event.extendedProps.patientName}</p>
+                                <p class="text-sm text-gray-500">Paciente</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <i class="fas fa-clock text-yellow-600 mr-3"></i>
+                            <div>
+                                <p class="font-medium">${event.start.toLocaleString('es-ES')}</p>
+                                <p class="text-sm text-gray-500">Fecha y hora</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <i class="fas fa-tag text-purple-600 mr-3"></i>
+                            <div>
+                                <p class="font-medium">${getTypeLabel(event.extendedProps.type)}</p>
+                                <p class="text-sm text-gray-500">Tipo de cita</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-2 pt-4 border-t">
+                            <button onclick="editAppointment('${event.id}')" 
+                                    class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-edit mr-1"></i>Editar
+                            </button>
+                            <button onclick="deleteAppointment('${event.id}')" 
+                                    class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                <i class="fas fa-trash mr-1"></i>Eliminar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('appointment-details-content').innerHTML = details;
+                document.getElementById('appointment-details-modal').classList.remove('hidden');
+            }
+            
+            function getTypeLabel(type) {
+                const labels = {
+                    'CONSULTATION': 'Consulta',
+                    'FOLLOWUP': 'Seguimiento',
+                    'EMERGENCY': 'Emergencia'
+                };
+                return labels[type] || type;
+            }
+            
+            function filterAppointments() {
+                // Aplicar filtros y recargar eventos
+                calendar.refetchEvents();
+            }
+            
+            function editAppointment(id) {
+                // Implementar edición de cita
+                closeDetailsModal();
+                // Cargar datos de la cita y abrir modal de edición
+            }
+            
+            function deleteAppointment(id) {
+                if (confirm('¿Estás seguro de que quieres eliminar esta cita?')) {
+                    // Implementar eliminación
+                    console.log('Deleting appointment:', id);
+                    showAlert('Cita eliminada exitosamente', 'success');
+                    closeDetailsModal();
+                    calendar.refetchEvents();
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>
