@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Citas</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Lista de Citas</h2>
+                <a href="/appointments/new" class="btn btn-primary">Nueva Cita</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Paciente</th>
+                            <th>Doctor</th>
+                            <th>Fecha y Hora</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="appointment : ${appointments}">
+                            <td th:text="${appointment.id}"></td>
+                            <td th:text="${appointment.patient.name}"></td>
+                            <td th:text="${appointment.doctor.name}"></td>
+                            <td th:text="${#temporals.format(appointment.startTime, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td th:text="${appointment.status}"></td>
+                            <td>
+                                <a th:href="@{/appointments/{id}/edit(id=${appointment.id})}" class="btn btn-sm btn-warning">Editar</a>
+                                <form th:action="@{/appointments/{id}/delete(id=${appointment.id})}" method="post" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro?')">Cancelar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

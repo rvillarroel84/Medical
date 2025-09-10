@@ -66,6 +66,18 @@ public class Patient {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    @Override
+    public String toString() {
+        return "Patient{" +
+                "id=" + id +
+                ", userId=" + userId +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                ", phone='" + phone + '\'' +
+                '}';
+    }
+    
     // Relaciones
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="${appointment.id} ? 'Editar Cita' : 'Nueva Cita'">Nueva Cita</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <!-- Breadcrumb -->
+    <div layout:fragment="breadcrumb">
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mr-2"></i>
+                <a href="/appointments" class="text-sm font-medium text-gray-500 hover:text-gray-700">Citas</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mr-2"></i>
+                <span class="text-sm font-medium text-gray-500" 
+                      th:text="${appointment.id} ? 'Editar Cita' : 'Nueva Cita'">Nueva Cita</span>
+            </div>
+        </li>
+    </div>
+
+    <!-- Page Header -->
+    <div layout:fragment="page-header">
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900">
+                <i class="fas fa-calendar-plus mr-3 text-yellow-600"></i>
+                <span th:text="${appointment.id} ? 'Editar Cita' : 'Nueva Cita'">Nueva Cita</span>
+            </h1>
+        </div>
+    </div>
+
+    <div layout:fragment="content">
+        <div class="bg-white shadow rounded-lg">
+            <div class="p-6">
+                <!-- Mostrar mensajes de error si existen -->
+                <div th:if="${error}" class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700" th:text="${error}"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <form th:action="${appointment.id} ? @{/appointments/{id}(id=${appointment.id})} : @{/appointments}" 
+                      th:object="${appointment}" method="post" class="space-y-6">
+                    
+                    <!-- Selección de Doctor y Paciente -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="doctorId" class="block text-sm font-medium text-gray-700">Doctor</label>
+                            <select id="doctorId" th:field="*{doctorId}" required
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="">Seleccione un doctor</option>
+                                <option th:each="doc : ${doctors}" 
+                                        th:value="${doc.id}" 
+                                        th:text="${doc.firstName + ' ' + doc.lastName + ' - ' + doc.specialization}">
+                                    Doctor Name
+                                </option>
+                            </select>
+                            <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('doctorId')}" th:errors="*{doctorId}"></div>
+                        </div>
+                        
+                        <div>
+                            <label for="patientId" class="block text-sm font-medium text-gray-700">Paciente</label>
+                            <select id="patientId" th:field="*{patientId}" required
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="">Seleccione un paciente</option>
+                                <option th:each="pat : ${patients}" 
+                                        th:value="${pat.id}" 
+                                        th:text="${pat.firstName + ' ' + pat.lastName}">
+                                    Patient Name
+                                </option>
+                            </select>
+                            <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('patientId')}" th:errors="*{patientId}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Fecha y Hora -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="startTime" class="block text-sm font-medium text-gray-700">Fecha y Hora de Inicio</label>
+                            <input type="text" id="startTime" th:field="*{startTime}" required
+                                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('startTime')}" th:errors="*{startTime}"></div>
+                        </div>
+
+                        <div>
+                            <label for="endTime" class="block text-sm font-medium text-gray-700">Fecha y Hora de Fin</label>
+                            <input type="text" id="endTime" th:field="*{endTime}" required
+                                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tipo de Cita -->
+                    <div>
+                        <label for="type" class="block text-sm font-medium text-gray-700">Tipo de Cita</label>
+                        <select id="type" th:field="*{type}" required
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">Seleccione el tipo de cita</option>
+                            <option th:each="type : ${T(com.medcal.model.enums.AppointmentType).values()}"
+                                    th:value="${type}"
+                                    th:text="${type.toString()}">
+                                TIPO
+                            </option>
+                        </select>
+                        <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></div>
+                    </div>
+                    
+                    <!-- Notas -->
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700">Notas</label>
+                        <textarea id="notes" th:field="*{notes}" rows="3"
+                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></div>
+                    </div>
+                    
+                    <!-- Botones -->
+                    <div class="flex justify-end space-x-3">
+                        <a href="/appointments" 
+                           class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                            Cancelar
+                        </a>
+                        <button type="submit" 
+                                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+        <script>
+            const commonConfig = {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i",
+                locale: "es",
+                minDate: "today",
+                time_24hr: true,
+                minuteIncrement: 15
+            };
+
+            // Configuración para hora de inicio
+            const startPicker = flatpickr("#startTime", {
+                ...commonConfig,
+                onChange: function(selectedDates, dateStr) {
+                    // Actualizar la fecha mínima del picker de fin
+                    endPicker.set('minDate', dateStr);
+                    
+                    // Si no hay fecha de fin seleccionada, establecer 30 minutos después
+                    if (!endPicker.selectedDates[0]) {
+                        const endDate = new Date(selectedDates[0]);
+                        endDate.setMinutes(endDate.getMinutes() + 30);
+                        endPicker.setDate(endDate);
+                    }
+                }
+            });
+
+            // Configuración para hora de fin
+            const endPicker = flatpickr("#endTime", {
+                ...commonConfig,
+                onChange: function(selectedDates) {
+                    // Validar que la fecha de fin no sea anterior a la de inicio
+                    const startDate = startPicker.selectedDates[0];
+                    if (startDate && selectedDates[0] < startDate) {
+                        this.setDate(startDate);
+                    }
+                }
+            });
+        </script>
+    </th:block>
+</body>
+</html>

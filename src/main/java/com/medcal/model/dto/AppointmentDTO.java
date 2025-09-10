@@ -29,6 +29,13 @@ public class AppointmentDTO {
     private AppointmentType type;
     private AppointmentStatus status;
     private String notes;
+    private UUID createdBy;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime updatedAt;
     
     // Información adicional para el frontend
     private String doctorName;
