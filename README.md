@@ -1,8 +1,8 @@
-# MedCal - Sistema de Gestión de Citas Médicas (Java/Spring Boot)
+# MedCal - Sistema de Gestión de Citas Médicas (Java/Spring Boot) con IA, Windsurf + Kilo Code + Cloude Sonnet 4 + Grok Code Fast 1 
 
 ## 🚀 Migración Completa de Node.js/TypeScript a Java/Spring Boot
 
-Este proyecto es una **migración completa y funcional** del sistema MedCal original (Node.js + Express + Prisma) a una arquitectura moderna basada en **Java + Spring Boot** con interfaz web completa.
+Este proyecto es un sistema de atención de citas medicas, tiene una arquitectura moderna basada en **Java + Spring Boot + Thymeleaf + TailwindCSS + HTMX + Font Awesome + JavaScript Vanilla** con interfaz web completa.
 
 ## ✨ Estado Actual - Aplicación Completamente Funcional
 
