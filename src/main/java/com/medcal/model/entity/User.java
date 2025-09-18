@@ -28,12 +28,18 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
     
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password", nullable = false)
     private String passwordHash;
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "role_id")
+    private UUID roleId;
+    
+    @Transient
     private Role role;
+    
+    @Builder.Default
+    @Column(name = "enabled")
+    private Boolean enabled = true;
     
     @Column(name = "first_name", nullable = false)
     private String firstName;

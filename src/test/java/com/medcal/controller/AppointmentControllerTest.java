@@ -2,10 +2,13 @@ package com.medcal.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medcal.model.dto.AppointmentDTO;
+import com.medcal.model.dto.AppointmentRequest;
 import com.medcal.model.entity.Appointment;
 import com.medcal.model.enums.AppointmentStatus;
+import com.medcal.exception.ResourceNotFoundException;
 import com.medcal.model.enums.AppointmentType;
 import com.medcal.service.AppointmentService;
+import com.medcal.service.DoctorService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -26,10 +30,11 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = AppointmentController.class, excludeAutoConfiguration = {
+@WebMvcTest(controllers = com.medcal.controller.api.AppointmentApiController.class, excludeAutoConfiguration = {
     org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class,
     org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration.class
 })
+@WithMockUser
 class AppointmentControllerTest {
 
     @Autowired
@@ -37,6 +42,9 @@ class AppointmentControllerTest {
 
     @MockBean
     private AppointmentService appointmentService;
+
+    @MockBean
+    private DoctorService doctorService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -194,30 +202,42 @@ class AppointmentControllerTest {
     }
 
     @Test
-    void createAppointment_WithValidData_ShouldCreateAppointment() throws Exception {
-        // Given
-        when(appointmentService.createAppointment(any(Appointment.class))).thenReturn(testAppointmentDTO);
+    @WithMockUser(username = "testUser")
+    void createAppointment_ShouldReturnCreatedAppointment() throws Exception {
+        // Setup test data
+        LocalDateTime appointmentTime = LocalDateTime.now().plusDays(1);
+        AppointmentRequest request = new AppointmentRequest();
+        request.setDoctorId(doctorId);
+        request.setStartTime(appointmentTime);
+        request.setEndTime(appointmentTime.plusHours(1));
+        request.setType(AppointmentType.CONSULTATION);
+        
+        when(appointmentService.scheduleAppointment(any(AppointmentRequest.class))).thenReturn(testAppointment);
 
-        // When & Then
+        // Execute and verify
         mockMvc.perform(post("/api/appointments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testAppointment)))
-                .andExpect(status().isCreated())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.doctorId").value(doctorId.toString()))
-                .andExpect(jsonPath("$.patientId").value(patientId.toString()))
-                .andExpect(jsonPath("$.type").value("CONSULTATION"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
 
-        verify(appointmentService).createAppointment(any(Appointment.class));
+        verify(appointmentService, times(1)).scheduleAppointment(any(AppointmentRequest.class));
     }
 
     @Test
+    @WithMockUser(username = "testUser")
     void createAppointment_WithInvalidData_ShouldReturnBadRequest() throws Exception {
-        // Given
-        when(appointmentService.createAppointment(any(Appointment.class)))
+        // Setup test data with invalid doctor ID
+        LocalDateTime appointmentTime = LocalDateTime.now().plusDays(1);
+        AppointmentRequest request = new AppointmentRequest();
+        request.setDoctorId(UUID.randomUUID()); // Invalid doctor ID
+        request.setStartTime(appointmentTime);
+        request.setEndTime(appointmentTime.plusHours(1));
+        request.setType(AppointmentType.CONSULTATION);
+        
+        when(appointmentService.scheduleAppointment(any(AppointmentRequest.class)))
                 .thenThrow(new IllegalArgumentException("El doctor especificado no existe"));
 
-        // When & Then
+        // Execute and verify
         mockMvc.perform(post("/api/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testAppointment)))
@@ -320,11 +340,16 @@ class AppointmentControllerTest {
     @Test
     void cancelAppointment_WhenExists_ShouldCancelAppointment() throws Exception {
         // Given
-        when(appointmentService.cancelAppointment(appointmentId)).thenReturn(true);
+        Appointment cancelledAppointment = new Appointment();
+        cancelledAppointment.setId(appointmentId);
+        cancelledAppointment.setStatus(AppointmentStatus.CANCELLED);
+        when(appointmentService.cancelAppointment(appointmentId)).thenReturn(cancelledAppointment);
 
         // When & Then
         mockMvc.perform(patch("/api/appointments/{id}/cancel", appointmentId))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(appointmentId.toString()))
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
 
         verify(appointmentService).cancelAppointment(appointmentId);
     }
@@ -332,7 +357,7 @@ class AppointmentControllerTest {
     @Test
     void cancelAppointment_WhenNotExists_ShouldReturnNotFound() throws Exception {
         // Given
-        when(appointmentService.cancelAppointment(appointmentId)).thenReturn(false);
+        when(appointmentService.cancelAppointment(appointmentId)).thenThrow(ResourceNotFoundException.class);
 
         // When & Then
         mockMvc.perform(patch("/api/appointments/{id}/cancel", appointmentId))

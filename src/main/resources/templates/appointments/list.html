@@ -4,44 +4,203 @@
       layout:decorate="~{layout/base}">
 <head>
     <title>Citas</title>
+    <style>
+        .appointment-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .appointment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        .appointment-header {
+            background-color: #4e73df;
+            color: white;
+            padding: 1rem;
+            font-weight: 600;
+        }
+        .appointment-body {
+            padding: 1.5rem;
+        }
+        .appointment-detail {
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        .appointment-detail i {
+            margin-right: 10px;
+            color: #4e73df;
+            width: 20px;
+            text-align: center;
+        }
+        .badge-status {
+            padding: 0.5em 1em;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-scheduled { background-color: #f6c23e; color: #000; }
+        .status-completed { background-color: #1cc88a; color: #fff; }
+        .status-cancelled { background-color: #e74a3b; color: #fff; }
+        .action-buttons .btn {
+            margin-right: 5px;
+            min-width: 80px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 0;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #dddfeb;
+        }
+        .search-container {
+            margin-bottom: 2rem;
+            background: #f8f9fc;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+    </style>
 </head>
 <body>
     <div layout:fragment="content">
-        <div class="container mt-4">
+        <div class="container-fluid py-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Lista de Citas</h2>
-                <a href="/appointments/new" class="btn btn-primary">Nueva Cita</a>
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">Gestión de Citas</h1>
+                    <p class="mb-0">Administra las citas médicas programadas</p>
+                </div>
+                <a href="/appointments/new" class="btn btn-primary">
+                    <i class="fas fa-plus-circle mr-2"></i>Nueva Cita
+                </a>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Paciente</th>
-                            <th>Doctor</th>
-                            <th>Fecha y Hora</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="appointment : ${appointments}">
-                            <td th:text="${appointment.id}"></td>
-                            <td th:text="${appointment.patient.name}"></td>
-                            <td th:text="${appointment.doctor.name}"></td>
-                            <td th:text="${#temporals.format(appointment.startTime, 'dd/MM/yyyy HH:mm')}"></td>
-                            <td th:text="${appointment.status}"></td>
-                            <td>
-                                <a th:href="@{/appointments/{id}/edit(id=${appointment.id})}" class="btn btn-sm btn-warning">Editar</a>
-                                <form th:action="@{/appointments/{id}/delete(id=${appointment.id})}" method="post" style="display: inline;">
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro?')">Cancelar</button>
-                                </form>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Filtros de búsqueda -->
+            <div class="search-container mb-4">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label>Buscar por paciente</label>
+                        <input type="text" class="form-control" placeholder="Nombre del paciente...">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Filtrar por estado</label>
+                        <select class="form-control">
+                            <option value="">Todos los estados</option>
+                            <option value="SCHEDULED">Programada</option>
+                            <option value="COMPLETED">Completada</option>
+                            <option value="CANCELLED">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Rango de fechas</label>
+                        <input type="date" class="form-control">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-primary w-100">
+                            <i class="fas fa-search mr-2"></i>Buscar
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            <!-- Lista de citas -->
+            <div class="row" th:if="${not #lists.isEmpty(appointments)}">
+                <div class="col-lg-6 mb-4" th:each="appointment : ${appointments}">
+                    <div class="card appointment-card h-100">
+                        <div class="appointment-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>ID: <span th:text="${appointment.id}"></span></span>
+                                <span class="badge-status" 
+                                      th:classappend="${'status-' + appointment.status}"
+                                      th:text="${#strings.capitalize(appointment.status)}">
+                                </span>
+                            </div>
+                        </div>
+                        <div class="appointment-body">
+                            <div class="appointment-detail">
+                                <i class="fas fa-user-injured"></i>
+                                <div>
+                                    <h6 class="mb-0">Paciente</h6>
+                                    <span th:text="${appointment.patientName}"></span>
+                                </div>
+                            </div>
+                            <div class="appointment-detail">
+                                <i class="fas fa-user-md"></i>
+                                <div>
+                                    <h6 class="mb-0">Doctor</h6>
+                                    <span th:text="${appointment.doctorName} + ' - ' + ${appointment.doctorSpecialization}"></span>
+                                </div>
+                            </div>
+                            <div class="appointment-detail">
+                                <i class="far fa-calendar-alt"></i>
+                                <div>
+                                    <h6 class="mb-0">Fecha y Hora</h6>
+                                    <span th:text="${#temporals.format(appointment.startTime, 'EEEE, d MMMM yyyy - HH:mm')}"></span>
+                                </div>
+                            </div>
+                            <div class="appointment-detail" th:if="${appointment.notes}">
+                                <i class="far fa-comment"></i>
+                                <div>
+                                    <h6 class="mb-0">Notas</h6>
+                                    <span th:text="${appointment.notes}" class="text-muted"></span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-3 action-buttons">
+                                <a th:href="@{/appointments/{id}/edit(id=${appointment.id})}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit mr-1"></i> Editar
+                                </a>
+                                <form th:action="@{/appointments/{id}/delete(id=${appointment.id})}" 
+                                      method="post" 
+                                      class="d-inline"
+                                      th:if="${appointment.status.name() != 'COMPLETED'}">
+                                    <button type="submit" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            onclick="return confirm('¿Estás seguro de que deseas cancelar esta cita?')">
+                                        <i class="fas fa-times-circle mr-1"></i> Cancelar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado vacío -->
+            <div class="card shadow" th:if="${#lists.isEmpty(appointments)}">
+                <div class="empty-state">
+                    <i class="far fa-calendar-check"></i>
+                    <h4>No hay citas programadas</h4>
+                    <p class="mb-4">No se encontraron citas médicas registradas en el sistema.</p>
+                    <a href="/appointments/new" class="btn btn-primary">
+                        <i class="fas fa-plus-circle mr-2"></i>Crear primera cita
+                    </a>
+                </div>
+            </div>
+
+            <!-- Paginación -->
+            <nav aria-label="Page navigation" class="mt-4" th:if="${not #lists.isEmpty(appointments)}">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Anterior</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 </body>

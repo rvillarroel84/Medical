@@ -2,6 +2,7 @@ package com.medcal.model.request;
 
 import com.medcal.model.entity.Appointment;
 import com.medcal.model.enums.AppointmentType;
+import com.medcal.model.enums.AppointmentStatus;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,6 +20,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AppointmentRequest {
+    
+    private UUID id;
 
     @NotNull(message = "El doctor es requerido")
     private UUID doctorId;
@@ -42,14 +45,22 @@ public class AppointmentRequest {
     @Size(max = 1000, message = "Las notas no pueden exceder los 1000 caracteres")
     private String notes;
 
+    private UUID createdBy;
+
+    @Builder.Default
+    private AppointmentStatus status = AppointmentStatus.PENDING;
+
     public Appointment toEntity() {
         return Appointment.builder()
+                .id(id)
                 .doctorId(doctorId)
                 .patientId(patientId)
                 .startTime(startTime)
                 .endTime(endTime)
                 .type(type)
+                .status(status != null ? status : AppointmentStatus.PENDING)
                 .notes(notes)
+                .createdBy(createdBy)
                 .build();
     }
 }

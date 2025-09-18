@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>Nueva Cita</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .doctor-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .doctor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .doctor-card.selected {
+            border-color: #4e73df;
+            background-color: #f8f9fe;
+        }
+        .time-slot {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .time-slot:hover {
+            background-color: #f1f3f9;
+        }
+        .time-slot.selected {
+            background-color: #4e73df;
+            color: white;
+            border-color: #4e73df;
+        }
+        .time-slots-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner-border {
+            width: 3rem; 
+            height: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid py-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">Agendar Nueva Cita</h1>
+                    <p class="mb-0">Seleccione un médico y horario disponible</p>
+                </div>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="steps">
+                        <div class="step-indicator d-flex justify-content-between">
+                            <div class="step" data-step="1">
+                                <div class="step-number">1</div>
+                                <div class="step-label">Seleccionar Médico</div>
+                            </div>
+                            <div class="step" data-step="2">
+                                <div class="step-number">2</div>
+                                <div class="step-label">Elegir Fecha y Hora</div>
+                            </div>
+                            <div class="step" data-step="3">
+                                <div class="step-number">3</div>
+                                <div class="step-label">Confirmar Cita</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 1: Select Doctor -->
+            <div id="step1" class="step active">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Seleccione un médico</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="doctors-container">
+                            <!-- Doctors will be loaded here -->
+                            <div class="col-12 text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Cargando...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-right">
+                        <button class="btn btn-primary" onclick="nextStep(2)" id="next-to-step2" disabled>
+                            Siguiente <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Date and Time -->
+            <div id="step2" class="step">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Seleccione fecha y hora</h5>
+                        <div id="selected-doctor-info" class="text-muted"></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label>Seleccione una fecha</label>
+                                    <input type="text" id="datepicker" class="form-control" placeholder="Seleccione una fecha">
+                                </div>
+                                <div class="available-dates mt-4">
+                                    <h6>Próximas fechas disponibles:</h6>
+                                    <div id="available-dates" class="d-flex flex-wrap">
+                                        <!-- Available dates will be shown here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <div id="time-slots-container">
+                                    <div class="text-center text-muted py-5">
+                                        <i class="far fa-calendar-alt fa-3x mb-3"></i>
+                                        <p>Seleccione una fecha para ver los horarios disponibles</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <button class="btn btn-outline-secondary" onclick="prevStep(1)">
+                            <i class="fas fa-arrow-left mr-2"></i> Atrás
+                        </button>
+                        <button class="btn btn-primary" id="next-to-step3" disabled>
+                            Siguiente <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Confirm Appointment -->
+            <div id="step3" class="step">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Confirmar Cita</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Detalles de la Cita</h6>
+                                <div id="appointment-details">
+                                    <!-- Appointment details will be shown here -->
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Notas adicionales (opcional)</label>
+                                    <textarea class="form-control" id="appointment-notes" rows="4" placeholder="Agregue alguna nota o síntoma que desee compartir con el médico"></textarea>
+                                </div>
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    Su cita quedará en estado <strong>Pendiente de confirmación</strong>. El médico revisará su solicitud y la confirmará lo antes posible.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <button class="btn btn-outline-secondary" onclick="prevStep(2)">
+                            <i class="fas fa-arrow-left mr-2"></i> Atrás
+                        </button>
+                        <button class="btn btn-success" id="confirm-appointment">
+                            <i class="fas fa-calendar-check mr-2"></i> Confirmar Cita
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+        <script>
+            let selectedDoctor = null;
+            let selectedDate = null;
+            let selectedTime = null;
+            let availableSlots = [];
+            let currentStep = 1;
+
+            // Initialize date picker
+            const datepicker = flatpickr("#datepicker", {
+                locale: "es",
+                minDate: "today",
+                dateFormat: "Y-m-d",
+                disable: [
+                    function(date) {
+                        // Disable weekends
+                        return (date.getDay() === 0 || date.getDay() === 6);
+                    }
+                ],
+                onChange: function(selectedDates, dateStr, instance) {
+                    selectedDate = dateStr;
+                    loadAvailableTimeSlots(selectedDoctor.id, dateStr);
+                }
+            });
+
+            // Load doctors
+            function loadDoctors() {
+                fetch('/api/doctors/available')
+                    .then(response => response.json())
+                    .then(doctors => {
+                        const container = document.getElementById('doctors-container');
+                        container.innerHTML = '';
+                        
+                        if (doctors.length === 0) {
+                            container.innerHTML = `
+                                <div class="col-12 text-center py-4">
+                                    <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">No hay médicos disponibles en este momento.</p>
+                                </div>
+                            `;
+                            return;
+                        }
+
+                        doctors.forEach(doctor => {
+                            const doctorCard = `
+                                <div class="col-md-4 mb-4">
+                                    <div class="card doctor-card h-100" onclick="selectDoctor(${JSON.stringify(doctor).replace(/"/g, '&quot;')})">
+                                        <div class="card-body text-center">
+                                            <img src="${doctor.photoUrl || '/img/default-doctor.png'}" 
+                                                 class="rounded-circle mb-3" 
+                                                 width="100" 
+                                                 height="100"
+                                                 alt="${doctor.name}">
+                                            <h5 class="card-title mb-1">${doctor.name}</h5>
+                                            <p class="text-muted mb-2">${doctor.specialty}</p>
+                                            <div class="d-flex justify-content-center">
+                                                <span class="badge badge-info mr-2">
+                                                    <i class="fas fa-star text-warning"></i> ${doctor.rating || 'Nuevo'}
+                                                </span>
+                                                <span class="badge badge-light">
+                                                    <i class="fas fa-user-md text-primary"></i> ${doctor.experience || '0'} años
+                                                </span>
+                                            </div>
+                                            <div class="mt-3">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-map-marker-alt"></i> ${doctor.location || 'Consultorio Virtual'}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            container.insertAdjacentHTML('beforeend', doctorCard);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading doctors:', error);
+                        showError('No se pudieron cargar los médicos. Por favor, intente de nuevo más tarde.');
+                    });
+            }
+
+            // Select a doctor
+            function selectDoctor(doctor) {
+                selectedDoctor = doctor;
+                document.querySelectorAll('.doctor-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                event.currentTarget.classList.add('selected');
+                document.getElementById('next-to-step2').disabled = false;
+                
+                // Update selected doctor info
+                document.getElementById('selected-doctor-info').innerHTML = `
+                    <strong>Médico:</strong> ${doctor.name} - ${doctor.specialty}
+                `;
+            }
+
+            // Load available time slots for selected doctor and date
+            function loadAvailableTimeSlots(doctorId, date) {
+                const timeSlotsContainer = document.getElementById('time-slots-container');
+                timeSlotsContainer.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Cargando horarios...</span>
+                        </div>
+                    </div>
+                `;
+
+                fetch(`/api/doctors/${doctorId}/availability?date=${date}`)
+                    .then(response => response.json())
+                    .then(slots => {
+                        availableSlots = slots;
+                        renderTimeSlots(slots);
+                    })
+                    .catch(error => {
+                        console.error('Error loading time slots:', error);
+                        timeSlotsContainer.innerHTML = `
+                            <div class="alert alert-warning">
+                                No se pudieron cargar los horarios disponibles. Por favor, intente de nuevo.
+                            </div>
+                        `;
+                    });
+            }
+
+            // Render available time slots
+            function renderTimeSlots(slots) {
+                const container = document.getElementById('time-slots-container');
+                
+                if (slots.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            No hay horarios disponibles para la fecha seleccionada. Por favor, seleccione otra fecha.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<h6>Horarios disponibles:</h6><div class="time-slots-container">';
+                
+                slots.forEach(slot => {
+                    const time = new Date(slot.startTime);
+                    const timeString = time.toLocaleTimeString('es-ES', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                    });
+                    
+                    html += `
+                        <div class="time-slot" 
+                             data-start="${slot.startTime}"
+                             data-end="${slot.endTime}"
+                             onclick="selectTimeSlot(this, '${slot.startTime}', '${slot.endTime}')">
+                            ${timeString}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+            }
+
+            // Select a time slot
+            function selectTimeSlot(element, startTime, endTime) {
+                document.querySelectorAll('.time-slot').forEach(slot => {
+                    slot.classList.remove('selected');
+                });
+                
+                element.classList.add('selected');
+                selectedTime = { startTime, endTime };
+                document.getElementById('next-to-step3').disabled = false;
+                
+                // Update appointment details preview
+                updateAppointmentDetails();
+            }
+
+            // Update appointment details preview
+            function updateAppointmentDetails() {
+                if (!selectedDoctor || !selectedDate || !selectedTime) return;
+                
+                const date = new Date(selectedTime.startTime);
+                const dateStr = date.toLocaleDateString('es-ES', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                
+                const timeStr = date.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+                
+                document.getElementById('appointment-details').innerHTML = `
+                    <div class="mb-3">
+                        <h6>Médico</h6>
+                        <p class="mb-1">${selectedDoctor.name}</p>
+                        <p class="text-muted small mb-0">${selectedDoctor.specialty}</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Fecha</h6>
+                        <p>${dateStr}</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Hora</h6>
+                        <p>${timeStr}</p>
+                    </div>
+                    <div class="alert alert-light">
+                        <i class="fas fa-video mr-2"></i>
+                        Esta será una consulta virtual. Recibirá un enlace de acceso antes de su cita.
+                    </div>
+                `;
+            }
+
+            // Navigation functions
+            function nextStep(step) {
+                if (step === 3 && !selectedTime) {
+                    showError('Por favor seleccione un horario disponible');
+                    return;
+                }
+                
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                document.getElementById(`step${step}`).classList.add('active');
+                currentStep = step;
+                
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function prevStep(step) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                document.getElementById(`step${step}`).classList.add('active');
+                currentStep = step;
+                
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            // Show error message
+            function showError(message) {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show';
+                alert.role = 'alert';
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                `;
+                
+                // Insert at the beginning of the content
+                const content = document.querySelector('[layout\\:fragment="content"]');
+                content.insertBefore(alert, content.firstChild);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 150);
+                }, 5000);
+            }
+
+            // Confirm appointment
+            document.getElementById('confirm-appointment').addEventListener('click', function() {
+                if (!selectedDoctor || !selectedDate || !selectedTime) {
+                    showError('Por favor complete todos los pasos para confirmar la cita.');
+                    return;
+                }
+                
+                const button = this;
+                const originalText = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+                
+                const appointmentData = {
+                    doctorId: selectedDoctor.id,
+                    startTime: selectedTime.startTime,
+                    endTime: selectedTime.endTime,
+                    notes: document.getElementById('appointment-notes').value,
+                    status: 'PENDING' // Initial status
+                };
+                
+                fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').content
+                    },
+                    body: JSON.stringify(appointmentData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al crear la cita');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Show success message
+                    const successHtml = `
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                            </div>
+                            <h3 class="mb-3">¡Cita Solicitada!</h3>
+                            <p class="lead mb-4">Su cita ha sido registrada exitosamente y está pendiente de confirmación por parte del médico.</p>
+                            <p class="text-muted mb-4">Recibirá una notificación por correo electrónico una vez que el médico confirme su cita.</p>
+                            <div class="mt-4">
+                                <a href="/appointments" class="btn btn-primary mr-2">
+                                    <i class="fas fa-calendar mr-2"></i>Ver Mis Citas
+                                </a>
+                                <a href="/" class="btn btn-outline-secondary">
+                                    <i class="fas fa-home mr-2"></i>Ir al Inicio
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Replace the entire content with success message
+                    const content = document.querySelector('[layout\\:fragment="content"]');
+                    content.innerHTML = successHtml;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                    showError('Ocurrió un error al procesar su solicitud. Por favor, intente de nuevo.');
+                });
+            });
+
+            // Initialize
+            document.addEventListener('DOMContentLoaded', function() {
+                loadDoctors();
+                
+                // Enable next button when time is selected
+                document.getElementById('next-to-step3').addEventListener('click', function() {
+                    if (selectedTime) {
+                        nextStep(3);
+                    } else {
+                        showError('Por favor seleccione un horario disponible');
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

@@ -29,21 +29,8 @@ public class AuthController {
         return "auth/login";
     }
     
-    @PostMapping("/login")
-    public String processLogin(@RequestParam String email,
-                              @RequestParam String password,
-                              @RequestParam(required = false) String rememberMe,
-                              Model model) {
-        
-        // Validación básica de credenciales demo
-        if (isValidDemoCredentials(email, password)) {
-            // En una implementación real, aquí se generaría el JWT y se establecería la sesión
-            return "redirect:/dashboard";
-        } else {
-            model.addAttribute("error", "Credenciales inválidas. Usa una de las cuentas de demostración.");
-            return "auth/login";
-        }
-    }
+    // Spring Security handles the POST /auth/login automatically
+    // This method is no longer needed as form login is configured in SecurityConfig
     
     @GetMapping("/logout")
     public String logout() {
@@ -56,10 +43,6 @@ public class AuthController {
         return "auth/forgot-password";
     }
     
-    private boolean isValidDemoCredentials(String email, String password) {
-        // Credenciales de demostración
-        return ("doctor@medcal.com".equals(email) && "doctor123".equals(password)) ||
-               ("admin@medcal.com".equals(email) && "admin123".equals(password)) ||
-               ("recepcion@medcal.com".equals(email) && "recepcion123".equals(password));
-    }
+    // Authentication is now handled by Spring Security with UserDetailsService
+    // No custom validation needed
 }

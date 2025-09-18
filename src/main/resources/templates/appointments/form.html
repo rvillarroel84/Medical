@@ -49,15 +49,17 @@
                     </div>
                 </div>
 
-                <form th:action="${appointment.id} ? @{/appointments/{id}(id=${appointment.id})} : @{/appointments}" 
-                      th:object="${appointment}" method="post" class="space-y-6">
+                <form th:action="${appointment.id != null} ? @{/appointments/} + ${appointment.id} : @{/appointments}" 
+                      th:object="${appointment}" method="post" class="space-y-6" th:if="${appointment != null}"
+                      th:with="isEdit=${appointment.id != null}">
                     
                     <!-- Selección de Doctor y Paciente -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="doctorId" class="block text-sm font-medium text-gray-700">Doctor</label>
                             <select id="doctorId" th:field="*{doctorId}" required
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                    th:disabled="${isEdit}">
                                 <option value="">Seleccione un doctor</option>
                                 <option th:each="doc : ${doctors}" 
                                         th:value="${doc.id}" 
@@ -71,7 +73,8 @@
                         <div>
                             <label for="patientId" class="block text-sm font-medium text-gray-700">Paciente</label>
                             <select id="patientId" th:field="*{patientId}" required
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                    th:disabled="${isEdit}">
                                 <option value="">Seleccione un paciente</option>
                                 <option th:each="pat : ${patients}" 
                                         th:value="${pat.id}" 
@@ -87,14 +90,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="startTime" class="block text-sm font-medium text-gray-700">Fecha y Hora de Inicio</label>
-                            <input type="text" id="startTime" th:field="*{startTime}" required
+                            <input type="datetime-local" id="startTime" th:field="*{startTime}" required
                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('startTime')}" th:errors="*{startTime}"></div>
                         </div>
 
                         <div>
                             <label for="endTime" class="block text-sm font-medium text-gray-700">Fecha y Hora de Fin</label>
-                            <input type="text" id="endTime" th:field="*{endTime}" required
+                            <input type="datetime-local" id="endTime" th:field="*{endTime}" required
                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <div class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></div>
                         </div>
@@ -131,7 +134,7 @@
                         </a>
                         <button type="submit" 
                                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Guardar
+                            <span th:text="${appointment.id} ? 'Actualizar' : 'Guardar'"></span>
                         </button>
                     </div>
                 </form>
@@ -145,7 +148,7 @@
         <script>
             const commonConfig = {
                 enableTime: true,
-                dateFormat: "Y-m-d H:i",
+                dateFormat: "Y-m-dTH:i",
                 locale: "es",
                 minDate: "today",
                 time_24hr: true,

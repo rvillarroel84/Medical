@@ -43,10 +43,15 @@ public class Doctor {
     @Column(nullable = false)
     private String specialization;
     
+    @Column(name = "is_active", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    @Builder.Default
+    private Boolean active = true;
+    
     private String phone;
     
     private String email;
     
+    @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "working_hours")
     private Map<String, Object> workingHours;

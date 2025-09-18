@@ -41,11 +41,13 @@ public class ClinicalHistory {
     
     private String treatment;
     
+    @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> prescriptions;
-    
+
     private String notes;
-    
+
+    @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     private List<Map<String, Object>> attachments;
     

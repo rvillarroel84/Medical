@@ -24,4 +24,19 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
     
     @Query("SELECT d FROM Doctor d JOIN d.user u WHERE u.email = :email")
     Optional<Doctor> findByUserEmail(@Param("email") String email);
+    
+    @Query("SELECT d FROM Doctor d WHERE d.active = true")
+    List<Doctor> findAllByActiveTrue();
+    
+    @Query("SELECT d FROM Doctor d WHERE d.active = true AND d.specialization = :specialty")
+    List<Doctor> findActiveBySpecialization(@Param("specialty") String specialty);
+    
+    @Query("SELECT d FROM Doctor d WHERE d.active = true AND d.id IN :ids")
+    List<Doctor> findActiveByIds(@Param("ids") List<UUID> ids);
+    
+    @Query("SELECT d FROM Doctor d WHERE d.active = true AND d.id = :id")
+    Optional<Doctor> findActiveById(@Param("id") UUID id);
+    
+    @Query("SELECT d FROM Doctor d WHERE d.active = true AND d.id = ?1")
+    Optional<Doctor> findByIdAndActiveTrue(UUID id);
 }

@@ -6,6 +6,7 @@ import com.medcal.model.entity.Doctor;
 import com.medcal.model.entity.Patient;
 import com.medcal.model.enums.AppointmentStatus;
 import com.medcal.model.enums.AppointmentType;
+import com.medcal.exception.ResourceNotFoundException;
 import com.medcal.repository.AppointmentRepository;
 import com.medcal.repository.DoctorRepository;
 import com.medcal.repository.PatientRepository;
@@ -360,28 +361,30 @@ class AppointmentServiceTest {
     @Test
     void cancelAppointment_WhenExists_ShouldCancelAppointment() {
         // Given
+        testAppointment.setStatus(AppointmentStatus.SCHEDULED);
         when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(testAppointment));
-        when(appointmentRepository.save(any(Appointment.class))).thenReturn(testAppointment);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        boolean result = appointmentService.cancelAppointment(appointmentId);
+        Appointment result = appointmentService.cancelAppointment(appointmentId);
 
         // Then
-        assertTrue(result);
+        assertNotNull(result);
+        assertEquals(AppointmentStatus.CANCELLED, result.getStatus());
         verify(appointmentRepository).findById(appointmentId);
         verify(appointmentRepository).save(any(Appointment.class));
     }
 
     @Test
-    void cancelAppointment_WhenNotExists_ShouldReturnFalse() {
+    void cancelAppointment_WhenNotExists_ShouldThrowException() {
         // Given
         when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.empty());
 
-        // When
-        boolean result = appointmentService.cancelAppointment(appointmentId);
-
-        // Then
-        assertFalse(result);
+        // When & Then
+        assertThrows(ResourceNotFoundException.class, () -> {
+            appointmentService.cancelAppointment(appointmentId);
+        });
+        
         verify(appointmentRepository).findById(appointmentId);
         verify(appointmentRepository, never()).save(any());
     }

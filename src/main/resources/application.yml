@@ -6,25 +6,34 @@ spring:
     name: medcal-backend
   
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:medcaldb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
     username: sa
-    password: 
+    password:
     driver-class-name: org.h2.Driver
+    platform: h2
+    sql-script-encoding: UTF-8
+    initialization-mode: always
+    data: classpath:data.sql
   
   h2:
     console:
       enabled: true
       path: /h2-console
+      settings:
+        web-allow-others: true
   
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create
     show-sql: true
+    generate-ddl: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
+        use_sql_comments: true
     open-in-view: false
+    defer-datasource-initialization: true
   
   security:
     jwt:

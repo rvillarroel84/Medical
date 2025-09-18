@@ -54,6 +54,7 @@ public class Patient {
     @Column(name = "emergency_contact")
     private String emergencyContact;
     
+    @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "insurance_info")
     private Map<String, Object> insuranceInfo;

@@ -1,6 +1,7 @@
 package com.medcal.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +23,11 @@ public class DoctorDTO {
     private String specialization;
     private String phone;
     private String email;
+    private String photoUrl;
+    private String bio;
+    private Double rating;
+    private Integer experience; // years of experience
+    private String location;
     private Map<String, Object> workingHours;
     
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -29,4 +35,15 @@ public class DoctorDTO {
     
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
+    
+    // Computed properties for UI
+    @JsonIgnore
+    public String getName() {
+        return String.format("%s %s", firstName, lastName).trim();
+    }
+    
+    @JsonIgnore
+    public String getSpecialty() {
+        return specialization;
+    }
 }

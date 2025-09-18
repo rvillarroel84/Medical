@@ -1,25 +1,27 @@
 package com.medcal.service;
 
 import com.medcal.model.dto.AppointmentDTO;
+import com.medcal.model.dto.AppointmentRequest;
 import com.medcal.model.entity.Appointment;
 import com.medcal.model.entity.Doctor;
-import com.medcal.model.entity.Patient;
 import com.medcal.model.enums.AppointmentStatus;
 import com.medcal.model.enums.AppointmentType;
+import com.medcal.exception.ConflictException;
+import com.medcal.exception.ResourceNotFoundException;
 import com.medcal.repository.AppointmentRepository;
 import com.medcal.repository.DoctorRepository;
 import com.medcal.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -86,8 +88,9 @@ public class AppointmentService {
                 .orElseThrow(() -> new IllegalArgumentException("El doctor especificado no existe"));
         
         // Verificar que el paciente existe
-        Patient patient = patientRepository.findById(appointment.getPatientId())
-                .orElseThrow(() -> new IllegalArgumentException("El paciente especificado no existe"));
+        if (!patientRepository.existsById(appointment.getPatientId())) {
+            throw new IllegalArgumentException("El paciente especificado no existe");
+        }
         
         // Verificar conflictos de horarios
         validateNoConflicts(appointment);
@@ -146,19 +149,88 @@ public class AppointmentService {
     }
     
     @Transactional
-    public boolean cancelAppointment(UUID id) {
-        return appointmentRepository.findById(id)
-                .map(appointment -> {
-                    appointment.setStatus(AppointmentStatus.CANCELLED);
-                    appointmentRepository.save(appointment);
-                    return true;
-                })
-                .orElse(false);
+    public Appointment scheduleAppointment(AppointmentRequest request) {
+        UUID patientId = request.getPatientId();
+        UUID doctorId = request.getDoctorId();
+        LocalDateTime startTime = request.getStartTime();
+        LocalDateTime endTime = request.getEndTime();
+        String notes = request.getNotes();
+        AppointmentType type = request.getType();
+        AppointmentStatus status = request.getStatus() != null ? request.getStatus() : AppointmentStatus.PENDING;
+        
+        // Validate appointment time
+        if (startTime.isAfter(endTime)) {
+            throw new IllegalArgumentException("Start time must be before end time");
+        }
+        
+        if (startTime.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot schedule appointment in the past");
+        }
+        
+        // Check if patient exists
+        if (!patientRepository.existsById(patientId)) {
+            throw new ResourceNotFoundException("Patient not found with id: " + patientId);
+        }
+                
+        // Check if doctor exists and is active
+        Doctor doctor = doctorRepository.findByIdAndActiveTrue(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active doctor not found with id: " + doctorId));
+                
+        // Check for scheduling conflicts
+        if (hasSchedulingConflict(doctorId, startTime, endTime, null)) {
+            throw new ConflictException("Doctor already has an appointment during this time");
+        }
+        
+        // Create and save the appointment
+        Appointment appointment = new Appointment();
+        appointment.setPatientId(patientId);
+        appointment.setDoctorId(doctor.getId());
+        appointment.setStartTime(startTime);
+        appointment.setEndTime(endTime);
+        appointment.setNotes(notes);
+        appointment.setType(type);
+        appointment.setStatus(status);
+        
+        return appointmentRepository.save(appointment);
+    }
+    
+    /**
+     * Checks if there's a scheduling conflict for the given doctor and time range.
+     * @param doctorId The ID of the doctor
+     * @param startTime Start time of the appointment
+     * @param endTime End time of the appointment
+     * @param excludeAppointmentId Optional appointment ID to exclude from conflict check (for updates)
+     * @return true if there's a conflict, false otherwise
+     */
+    public boolean hasSchedulingConflict(UUID doctorId, LocalDateTime startTime, 
+                                       LocalDateTime endTime, UUID excludeAppointmentId) {
+        // Find all appointments for the doctor that overlap with the given time range
+        List<Appointment> conflictingAppointments = appointmentRepository
+                .findByDoctorIdAndTimeRange(doctorId, startTime, endTime);
+                
+        // If we're updating an appointment, exclude it from the conflict check
+        if (excludeAppointmentId != null) {
+            conflictingAppointments = conflictingAppointments.stream()
+                    .filter(appt -> !appt.getId().equals(excludeAppointmentId))
+                    .collect(Collectors.toList());
+        }
+        
+        // Also check for any appointments that would overlap with the new one
+        return !conflictingAppointments.isEmpty();
     }
     
     public boolean isDoctorAvailable(UUID doctorId, LocalDateTime startTime, LocalDateTime endTime) {
         List<Appointment> conflicts = appointmentRepository.findConflictingAppointments(doctorId, startTime, endTime);
         return conflicts.isEmpty();
+    }
+    
+    @Transactional
+    public Appointment cancelAppointment(UUID id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
+                
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        return appointmentRepository.save(appointment);
     }
     
     private void validateAppointment(Appointment appointment) {
@@ -257,6 +329,30 @@ public class AppointmentService {
     }
     
     private AppointmentDTO convertToDTO(Appointment appointment) {
+        // Fetch doctor name and specialization
+        String doctorName = "Unknown";
+        String doctorSpecialization = "";
+        try {
+            var doctor = doctorRepository.findById(appointment.getDoctorId()).orElse(null);
+            if (doctor != null) {
+                doctorName = doctor.getFirstName() + " " + doctor.getLastName();
+                doctorSpecialization = doctor.getSpecialization() != null ? doctor.getSpecialization() : "";
+            }
+        } catch (Exception e) {
+            log.warn("Error fetching doctor info for appointment {}", appointment.getId(), e);
+        }
+
+        // Fetch patient name
+        String patientName = "Unknown";
+        try {
+            var patient = patientRepository.findById(appointment.getPatientId()).orElse(null);
+            if (patient != null) {
+                patientName = patient.getFirstName() + " " + patient.getLastName();
+            }
+        } catch (Exception e) {
+            log.warn("Error fetching patient info for appointment {}", appointment.getId(), e);
+        }
+
         return AppointmentDTO.builder()
                 .id(appointment.getId())
                 .doctorId(appointment.getDoctorId())
@@ -269,6 +365,31 @@ public class AppointmentService {
                 .createdBy(appointment.getCreatedBy())
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
+                .doctorName(doctorName)
+                .patientName(patientName)
+                .doctorSpecialization(doctorSpecialization)
                 .build();
+    }
+    
+    /**
+     * Get all appointments for a specific doctor
+     * @param doctorId The ID of the doctor
+     * @return List of appointment DTOs
+     */
+    public List<AppointmentDTO> getDoctorAppointments(UUID doctorId) {
+        return appointmentRepository.findByDoctorIdOrderByStartTimeDesc(doctorId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get all appointments for a specific patient
+     * @param patientId The ID of the patient
+     * @return List of appointment DTOs
+     */
+    public List<AppointmentDTO> getPatientAppointments(UUID patientId) {
+        return appointmentRepository.findByPatientIdOrderByStartTimeDesc(patientId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 }

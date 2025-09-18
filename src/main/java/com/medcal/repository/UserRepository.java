@@ -16,7 +16,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     
     Optional<User> findByEmail(String email);
     
-    List<User> findByRole(Role role);
+    List<User> findByRoleId(UUID roleId);
     
     @Query("SELECT u FROM User u WHERE u.firstName LIKE %:name% OR u.lastName LIKE %:name%")
     List<User> findByNameContaining(@Param("name") String name);
