@@ -106,13 +106,16 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div th:each="day : ${T(java.time.DayOfWeek).values()}" class="flex items-center space-x-2">
                                 <input type="checkbox" th:id="${'workday-' + day}" th:name="${'workingHours[' + day + '].enabled'}"
+                                       th:checked="${doctor.workingHours[__${#strings.toLowerCase(day)}__] != null}"
                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                <label th:for="${'workday-' + day}" class="text-sm text-gray-600" 
+                                <label th:for="${'workday-' + day}" class="text-sm text-gray-600"
                                        th:text="${#strings.toLowerCase(day)}">día</label>
                                 <div class="flex space-x-2">
                                     <input type="time" th:name="${'workingHours[' + day + '].start'}"
+                                           th:value="${doctor.workingHours[__${#strings.toLowerCase(day)}__]?.start}"
                                            class="block w-24 border border-gray-300 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                                     <input type="time" th:name="${'workingHours[' + day + '].end'}"
+                                           th:value="${doctor.workingHours[__${#strings.toLowerCase(day)}__]?.end}"
                                            class="block w-24 border border-gray-300 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                             </div>

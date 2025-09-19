@@ -28,7 +28,7 @@ public class DoctorDTO {
     private Double rating;
     private Integer experience; // years of experience
     private String location;
-    private Map<String, Object> workingHours;
+    private Map<String, Map<String, String>> workingHours;
     
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;

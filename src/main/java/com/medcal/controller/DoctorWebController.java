@@ -46,7 +46,7 @@ public class DoctorWebController {
     public String createDoctor(@ModelAttribute Doctor doctor, @RequestParam Map<String, String> params, Model model) {
         try {
             // Procesar el horario de trabajo
-            Map<String, Object> workingHours = new HashMap<>();
+            Map<String, Map<String, String>> workingHours = new HashMap<>();
             for (DayOfWeek day : DayOfWeek.values()) {
                 String dayKey = day.toString().toLowerCase();
                 String enabledParam = params.get("workingHours[" + day + "].enabled");

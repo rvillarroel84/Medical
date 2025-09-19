@@ -54,7 +54,7 @@ public class Doctor {
     @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "working_hours")
-    private Map<String, Object> workingHours;
+    private Map<String, Map<String, String>> workingHours;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
